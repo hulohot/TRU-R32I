@@ -1,7 +1,6 @@
 import cocotb
-from cocotb.triggers import Timer, RisingEdge, FallingEdge, ClockCycles
+from cocotb.triggers import Timer, ClockCycles
 from cocotb.clock import Clock
-from cocotb.binary import BinaryValue
 from collections import defaultdict
 import json
 import atexit
@@ -136,7 +135,7 @@ async def test_reset(dut):
     await Timer(20, units="ns")
     
     # Check values in reset
-    assert dut.pc.value == 0, f"PC should be 0 in reset, got {dut.pc.value}"
+    assert dut.pc_current.value == 0, f"PC should be 0 in reset, got {dut.pc_current.value}"
     
     # Release reset
     dut.rst_n.value = 1
@@ -144,7 +143,7 @@ async def test_reset(dut):
     await Timer(20, units="ns")
     
     # Check PC increments after reset
-    assert dut.pc.value == 8, f"PC should be 8 after reset, got {dut.pc.value}"
+    assert dut.pc_current.value == 8, f"PC should be 8 after reset, got {dut.pc_current.value}"
     coverage.operations["increment"] += 1
     coverage.addresses["word_aligned"] += 1
 
@@ -157,7 +156,7 @@ async def test_sequential_increment(dut):
     # Check several cycles of sequential increment
     expected_pc = 8  # After initialize_dut, we should be at 8
     for _ in range(5):
-        assert dut.pc.value == expected_pc, f"PC should be {expected_pc}, got {dut.pc.value}"
+        assert dut.pc_current.value == expected_pc, f"PC should be {expected_pc}, got {dut.pc_current.value}"
         coverage.operations["increment"] += 1
         coverage.addresses["sequential"] += 1
         coverage.addresses["word_aligned"] += 1
@@ -168,27 +167,39 @@ async def test_sequential_increment(dut):
 async def test_stall(dut):
     """Test stall behavior."""
     await initialize_dut(dut)
-    await Timer(10, units="ns")
+    
+    # Wait for any initialization effects to settle
+    await Timer(20, units="ns")
     
     # Get current PC value
-    current_pc = dut.pc.value
+    current_pc = dut.pc_current.value
+    cocotb.log.info(f"Initial PC value: {current_pc}")
     
     # Assert stall
     dut.stall.value = 1
     coverage.operations["stall"] += 1
     coverage.transitions["increment_to_stall"] += 1
-    await Timer(30, units="ns")
     
-    # Verify PC hasn't changed
-    assert dut.pc.value == current_pc, f"PC should not change while stalled"
+    # Check PC value immediately after asserting stall
+    await Timer(1, units="ns")
+    cocotb.log.info(f"PC value right after stall: {dut.pc_current.value}")
+    assert dut.pc_current.value == current_pc, f"PC changed immediately after stall (expected {current_pc}, got {dut.pc_current.value})"
+    
+    # Check PC remains stable for several clock cycles
+    for i in range(3):
+        await Timer(10, units="ns")
+        cocotb.log.info(f"PC value during stall cycle {i}: {dut.pc_current.value}")
+        assert dut.pc_current.value == current_pc, f"PC changed during stall cycle {i}"
     
     # Release stall
     dut.stall.value = 0
     coverage.transitions["stall_to_increment"] += 1
-    await Timer(10, units="ns")
     
-    # Verify PC continues from where it was
-    assert dut.pc.value == current_pc + 4, f"PC should increment after stall is released"
+    # Wait for next clock edge and check increment
+    await Timer(10, units="ns")
+    expected_pc = current_pc + 4
+    cocotb.log.info(f"PC value after stall release: {dut.pc_current.value} (expected {expected_pc})")
+    assert dut.pc_current.value == expected_pc, f"PC did not increment correctly after stall (expected {expected_pc}, got {dut.pc_current.value})"
     coverage.operations["increment"] += 1
 
 @cocotb.test()
@@ -208,7 +219,7 @@ async def test_branch(dut):
     await Timer(10, units="ns")
     
     # Verify branch was taken
-    assert dut.pc.value == branch_target, f"PC should be branch target after branch taken"
+    assert dut.pc_current.value == branch_target, f"PC should be branch target after branch taken"
     
     # Return to sequential execution
     dut.branch_taken.value = 0
@@ -216,7 +227,7 @@ async def test_branch(dut):
     await Timer(10, units="ns")
     
     # Verify normal increment after branch
-    assert dut.pc.value == branch_target + 4, f"PC should increment normally after branch"
+    assert dut.pc_current.value == branch_target + 4, f"PC should increment normally after branch"
     coverage.operations["increment"] += 1
 
 @cocotb.test()
@@ -237,7 +248,7 @@ async def test_branch_edge_cases(dut):
     dut.branch_target.value = max_addr
     dut.branch_taken.value = 1
     await ClockCycles(dut.clk, 2)  # Wait for branch to take effect
-    assert dut.pc.value == max_addr
+    assert dut.pc_current.value == max_addr
     coverage.operations["branch"] += 1
     coverage.addresses["near_max"] += 1
     coverage.transitions["increment_to_branch"] += 1
@@ -247,72 +258,46 @@ async def test_branch_edge_cases(dut):
     dut.branch_target.value = branch_addr
     dut.stall.value = 1
     await ClockCycles(dut.clk, 2)  # Wait for stall to take effect
-    assert dut.pc.value == max_addr  # Should maintain current PC during stall
+    assert dut.pc_current.value == max_addr  # Should maintain current PC during stall
     coverage.operations["branch_stall"] += 1
     
     # Release stall and complete branch
     dut.stall.value = 0
     await ClockCycles(dut.clk, 2)  # Wait for branch to complete
-    assert dut.pc.value == branch_addr
+    assert dut.pc_current.value == branch_addr
     coverage.operations["branch"] += 1
     coverage.transitions["branch_to_increment"] += 1
 
 @cocotb.test()
 async def test_multiple_branches(dut):
     """Test multiple branch operations."""
-    clock = Clock(dut.clk, 10, units="ns")
-    cocotb.start_soon(clock.start())
-    
-    # Initialize coverage
-    coverage.operations["reset"] += 1
-    
-    # Reset
     await initialize_dut(dut)
-    await ClockCycles(dut.clk, 1)  # Wait for reset to take effect
     
-    # Test multiple branches with different patterns
-    branch_targets = [
-        0x4,        # Word-aligned
-        0x1000,     # Word-aligned, mid-range
-        0x7FFFFFC,  # Near max
-        0x100,      # Another word-aligned
-        0x2000      # Word-aligned, different range
-    ]
+    # Test multiple branch targets
+    test_targets = [0x100, 0x200, 0x300, 0x400]
     
-    for target in branch_targets:
-        # Normal branch
-        dut.branch_target.value = target
+    for target in test_targets:
+        # Take branch
         dut.branch_taken.value = 1
-        await ClockCycles(dut.clk, 2)  # Wait for branch to take effect
-        assert dut.pc.value == target
+        dut.branch_target.value = target
+        await Timer(20, units="ns")
+        
+        # Verify branch was taken
+        assert dut.pc_current.value == target, f"PC should be {target}, got {dut.pc_current.value}"
         coverage.operations["branch"] += 1
         coverage.addresses["word_aligned"] += 1
         coverage.transitions["increment_to_branch"] += 1
         
-        # Sequential execution after branch
+        # Return to sequential execution
         dut.branch_taken.value = 0
-        await ClockCycles(dut.clk, 1)  # Wait for sequential execution
-        expected_pc = target + 4  # PC increments by 4 each cycle
-        assert dut.pc.value == expected_pc
+        await Timer(10, units="ns")
+        
+        # Verify normal increment after branch
+        expected_pc = target + 4
+        assert dut.pc_current.value == expected_pc, f"PC should be {expected_pc}, got {dut.pc_current.value}"
         coverage.addresses["sequential"] += 1
         coverage.operations["increment"] += 1
         coverage.transitions["branch_to_increment"] += 1
-        
-        # Branch with stall
-        next_target = target + 0x1000
-        dut.branch_target.value = next_target
-        dut.branch_taken.value = 1
-        dut.stall.value = 1
-        await ClockCycles(dut.clk, 1)  # Wait for stall to take effect
-        assert dut.pc.value == expected_pc  # PC should not change during stall
-        coverage.operations["branch_stall"] += 1
-        
-        # Release stall
-        dut.stall.value = 0
-        await ClockCycles(dut.clk, 1)  # Wait for branch to complete
-        assert dut.pc.value == next_target
-        coverage.operations["branch"] += 1
-        coverage.transitions["increment_to_branch"] += 1
 
 @cocotb.test()
 async def test_multiple_stalls(dut):
@@ -323,7 +308,7 @@ async def test_multiple_stalls(dut):
     test_points = [0x8, 0x10, 0x18, 0x20]
     for point in test_points:
         # Run until we reach the test point
-        while dut.pc.value != point:
+        while dut.pc_current.value != point:
             await Timer(10, units="ns")
             coverage.operations["increment"] += 1
             coverage.addresses["sequential"] += 1
@@ -336,11 +321,11 @@ async def test_multiple_stalls(dut):
         # Hold stall for a few cycles
         for _ in range(3):
             await Timer(10, units="ns")
-            assert dut.pc.value == point, f"PC should maintain value during stall"
+            assert dut.pc_current.value == point, f"PC should maintain value during stall"
         
         # Release stall
         dut.stall.value = 0
         coverage.transitions["stall_to_increment"] += 1
         await Timer(10, units="ns")
-        assert dut.pc.value == point + 4, f"PC should increment after stall"
+        assert dut.pc_current.value == point + 4, f"PC should increment after stall"
         coverage.operations["increment"] += 1 

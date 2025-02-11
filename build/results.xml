@@ -1,10 +1,11 @@
 <testsuites name="results">
   <testsuite name="all" package="all">
-    <property name="random_seed" value="1739258360" />
-    <testcase name="test_register_file_reset" classname="test_register_file" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_register_file.py" lineno="116" time="0.010979890823364258" sim_time_ns="42.001" ratio_time="3825.2657221896507" />
-    <testcase name="test_x0_read" classname="test_register_file" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_register_file.py" lineno="128" time="0.0028870105743408203" sim_time_ns="31.000999999999998" ratio_time="10738.097142951523" />
-    <testcase name="test_write_read" classname="test_register_file" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_register_file.py" lineno="150" time="0.0012159347534179688" sim_time_ns="53.001000000000005" ratio_time="43588.68751058824" />
-    <testcase name="test_concurrent_read_write" classname="test_register_file" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_register_file.py" lineno="185" time="0.0012879371643066406" sim_time_ns="41.00099999999999" ratio_time="31834.627601629018" />
-    <testcase name="test_random_access" classname="test_register_file" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_register_file.py" lineno="218" time="0.008069038391113281" sim_time_ns="431.001" ratio_time="53414.171442619074" />
+    <property name="random_seed" value="1739308776" />
+    <testcase name="test_initial_values" classname="test_instruction_memory" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_instruction_memory.py" lineno="106" time="0.0013837814331054688" sim_time_ns="91.0" ratio_time="65761.83046175052" />
+    <testcase name="test_word_alignment" classname="test_instruction_memory" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_instruction_memory.py" lineno="124" time="0.001051187515258789" sim_time_ns="141.001" ratio_time="134134.96445996827" />
+    <testcase name="test_sequential_access" classname="test_instruction_memory" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_instruction_memory.py" lineno="143" time="0.002331256866455078" sim_time_ns="341.001" ratio_time="146273.45656616893" />
+    <testcase name="test_memory_bounds" classname="test_instruction_memory" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_instruction_memory.py" lineno="163" time="0.0007359981536865234" sim_time_ns="101.00100000000009" ratio_time="137229.96381729847" />
+    <testcase name="test_repeated_access" classname="test_instruction_memory" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_instruction_memory.py" lineno="194" time="0.0009381771087646484" sim_time_ns="141.00099999999998" ratio_time="150292.5179933926" />
+    <testcase name="test_random_access" classname="test_instruction_memory" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_instruction_memory.py" lineno="216" time="0.0015010833740234375" sim_time_ns="221.0010000000001" ratio_time="147227.66491486665" />
   </testsuite>
 </testsuites>

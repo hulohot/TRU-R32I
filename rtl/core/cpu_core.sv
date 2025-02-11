@@ -21,7 +21,6 @@ module cpu_core #(
 
     // Internal signals
     logic [31:0] pc_current;          // Current program counter
-    logic [31:0] pc_next;             // Next program counter
     logic [31:0] pc_plus4;            // PC + 4
     logic [31:0] instruction;         // Current instruction
     
@@ -63,12 +62,15 @@ module cpu_core #(
     // Branch control
     logic        branch_taken;
     logic [31:0] branch_target;
+    logic        stall;  // Added stall signal
     
     // Program Counter
     program_counter pc (
         .clk(clk),
         .rst_n(rst_n),
-        .pc_next(pc_next),
+        .stall(stall),
+        .branch_taken(branch_taken),
+        .branch_target(branch_target),
         .pc_current(pc_current)
     );
 
@@ -138,38 +140,41 @@ module cpu_core #(
     assign alu_a = rs1_data;
     assign alu_b = alu_src ? imm_out : rs2_data;
 
-    // Branch control
-    always_comb begin
-        case (funct3)
-            3'b000:  branch_taken = branch && alu_zero;        // BEQ
-            3'b001:  branch_taken = branch && !alu_zero;       // BNE
-            3'b100:  branch_taken = branch && alu_negative;    // BLT
-            3'b101:  branch_taken = branch && !alu_negative;   // BGE
-            3'b110:  branch_taken = branch && alu_negative;    // BLTU
-            3'b111:  branch_taken = branch && !alu_negative;   // BGEU
-            default: branch_taken = 1'b0;
-        endcase
-    end
-    
-    assign branch_target = pc_current + imm_b_type;
-
     // Next PC calculation
     assign pc_plus4 = pc_current + 32'd4;
+    
+    // Stall control - for now, we don't stall
+    assign stall = 1'b0;
+    
+    // Branch target calculation
     always_comb begin
         if (jump) begin
             if (opcode == 7'b1100111) // JALR
-                pc_next = {alu_result[31:1], 1'b0}; // Clear LSB
+                branch_target = {alu_result[31:1], 1'b0}; // Clear LSB
             else
-                pc_next = pc_current + imm_j_type; // JAL
-        end else if (branch_taken) begin
-            pc_next = branch_target;
+                branch_target = pc_current + imm_j_type; // JAL
+            branch_taken = 1'b1;
+        end else if (branch) begin
+            branch_target = pc_current + imm_b_type;
+            case (funct3)
+                3'b000:  branch_taken = alu_zero;        // BEQ
+                3'b001:  branch_taken = !alu_zero;       // BNE
+                3'b100:  branch_taken = alu_negative;    // BLT
+                3'b101:  branch_taken = !alu_negative;   // BGE
+                3'b110:  branch_taken = alu_negative;    // BLTU
+                3'b111:  branch_taken = !alu_negative;   // BGEU
+                default: branch_taken = 1'b0;
+            endcase
         end else begin
-            pc_next = pc_plus4;
+            branch_target = pc_plus4;
+            branch_taken = 1'b0;
         end
     end
 
     // Memory interface
+    /* verilator lint_off UNUSEDSIGNAL */
     logic [31:0] dmem_addr_offset;  // Address relative to data memory base
+    /* verilator lint_on UNUSEDSIGNAL */
     logic        dmem_addr_valid;   // Whether the address is in valid range
     
     // Check if address is in valid range for data memory

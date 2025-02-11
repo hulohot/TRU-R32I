@@ -107,8 +107,15 @@ async def initialize_dut(dut):
     clock = Clock(dut.clk, 10, units="ns")
     cocotb.start_soon(clock.start())
     
-    # Reset
+    # Initialize all inputs to known values
     dut.rst_n.value = 0
+    dut.rs1_addr.value = 0
+    dut.rs2_addr.value = 0
+    dut.rd_addr.value = 0
+    dut.rd_data.value = 0
+    dut.we.value = 0
+    
+    # Reset sequence
     await RisingEdge(dut.clk)
     dut.rst_n.value = 1
     await RisingEdge(dut.clk)
@@ -229,23 +236,41 @@ async def test_random_access(dut):
         if random.random() < 0.5:  # Write
             reg = random.randint(1, 31)  # Skip x0
             value = random.randint(0, 0xFFFFFFFF)
+            
+            # Write operation
             dut.we.value = 1
             dut.rd_addr.value = reg
             dut.rd_data.value = value
             coverage.register_writes[reg] += 1
             coverage.data_patterns[value] += 1
+            
+            # Wait for write to complete
             await RisingEdge(dut.clk)
-            await Timer(1, units="ns")  # Wait for write to complete
-            register_values[reg] = value  # Update shadow register after write
+            
+            # Disable write enable after write
+            dut.we.value = 0
+            
+            # Update shadow register
+            register_values[reg] = value
             coverage.concurrent_ops["write_after_read"] += 1
         else:  # Read
             reg = random.randint(0, 31)  # Include x0 for reads
+            
+            # Read operation
             dut.we.value = 0
             dut.rs1_addr.value = reg
-            coverage.register_reads[reg] += 1
-            await Timer(1, units="ns")  # Wait for read to complete
-            read_value = int(dut.rs1_data.value)
+            dut.rs2_addr.value = reg  # Test both read ports
+            coverage.register_reads[reg] += 2
+            
+            # Wait for read to stabilize
+            await Timer(1, units="ns")
+            
+            # Verify both read ports
+            rs1_value = int(dut.rs1_data.value)
+            rs2_value = int(dut.rs2_data.value)
             expected_value = register_values[reg]
-            assert read_value == expected_value, \
-                f"Incorrect value read from register {reg}. Expected 0x{expected_value:08x}, got 0x{read_value:08x}"
-            coverage.concurrent_ops["read_after_write"] += 1 
+            
+            assert rs1_value == expected_value, \
+                f"Incorrect value read from rs1 port of register {reg}. Expected 0x{expected_value:08x}, got 0x{rs1_value:08x}"
+            assert rs2_value == expected_value, \
+                f"Incorrect value read from rs2 port of register {reg}. Expected 0x{expected_value:08x}, got 0x{rs2_value:08x}" 

@@ -1,18 +1,18 @@
 {
     "operations": {
-        "ADD": 16,
-        "SUB": 23,
-        "AND": 21,
-        "OR": 14,
+        "ADD": 22,
+        "SUB": 19,
+        "AND": 14,
+        "OR": 15,
         "XOR": 13,
-        "SLL": 13,
+        "SLL": 15,
         "SRL": 15,
-        "SRA": 10,
-        "SLT": 12,
-        "SLTU": 20
+        "SRA": 14,
+        "SLT": 14,
+        "SLTU": 16
     },
     "special_values": {
-        "sign_bit": 101,
+        "sign_bit": 102,
         "zero": 14,
         "all_ones": 7,
         "min_negative": 13,

@@ -1,0 +1,9 @@
+---
+description: Updating/Editing make file
+globs: Makefile
+---
+
+# Your rule content
+
+- Referencing [Makefile](mdc:Makefile) whenever you need to run or test a certain aspect of the project
+- Update [Makefile](mdc:Makefile) when appropriate, but make sure to follow the same coding style.

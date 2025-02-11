@@ -1,7 +1,6 @@
 import cocotb
 from cocotb.triggers import Timer, RisingEdge
 from cocotb.clock import Clock
-from cocotb.binary import BinaryValue
 from collections import defaultdict
 import json
 import atexit
@@ -96,12 +95,13 @@ async def initialize_dut(dut):
     clock = Clock(dut.clk, 10, units="ns")
     cocotb.start_soon(clock.start())
     
-    # Initialize address to 0
+    # Initialize address to 0 (word-aligned)
     dut.addr.value = 0
     coverage.special_cases["reset_access"] += 1
     
     # Wait a few clock cycles
-    await Timer(20, units="ns")
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
 
 @cocotb.test()
 async def test_initial_values(dut):
@@ -118,8 +118,8 @@ async def test_initial_values(dut):
         
         await RisingEdge(dut.clk)
         await Timer(1, units="ns")
-        assert dut.data_out.value == 0x00000013, \
-            f"Memory at {addr} should be NOP (0x00000013), got {dut.data_out.value:08x}"
+        assert dut.rdata.value == 0x00000013, \
+            f"Memory at {addr} should be NOP (0x00000013), got {dut.rdata.value:08x}"
 
 @cocotb.test()
 async def test_word_alignment(dut):
@@ -137,7 +137,7 @@ async def test_word_alignment(dut):
             await Timer(1, units="ns")
             # The actual data should still be aligned (bottom bits ignored)
             expected_aligned_addr = addr & ~0x3
-            assert dut.data_out.value == 0x00000013, \
+            assert dut.rdata.value == 0x00000013, \
                 f"Memory access with non-aligned address {addr} should still return NOP"
 
 @cocotb.test()
@@ -157,7 +157,7 @@ async def test_sequential_access(dut):
             
             await RisingEdge(dut.clk)
             await Timer(1, units="ns")
-            assert dut.data_out.value == 0x00000013, \
+            assert dut.rdata.value == 0x00000013, \
                 f"Sequential access at {addr} failed"
 
 @cocotb.test()
@@ -180,7 +180,7 @@ async def test_memory_bounds(dut):
         
         await RisingEdge(dut.clk)
         await Timer(1, units="ns")
-        assert dut.data_out.value == 0x00000013, \
+        assert dut.rdata.value == 0x00000013, \
             f"Access at near-end address {addr} failed"
     
     # Test multiple out-of-bounds addresses
@@ -210,7 +210,7 @@ async def test_repeated_access(dut):
             
             await RisingEdge(dut.clk)
             await Timer(1, units="ns")
-            assert dut.data_out.value == 0x00000013, \
+            assert dut.rdata.value == 0x00000013, \
                 f"Repeated access at {test_addr} failed"
 
 @cocotb.test()
@@ -234,5 +234,5 @@ async def test_random_access(dut):
         
         await RisingEdge(dut.clk)
         await Timer(1, units="ns")
-        assert dut.data_out.value == 0x00000013, \
+        assert dut.rdata.value == 0x00000013, \
             f"Random access at {addr} failed" 

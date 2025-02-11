@@ -1,0 +1,9 @@
+---
+description: Know when/how to update docs
+globs: *.md
+---
+
+# Your rule content
+
+- Update [README.md](mdc:README.md) and [notes.md](mdc:docs/notes.md) whenever a new feature is completed or modified
+- Make sure to mark the checkbox in [README.md](mdc:README.md) if it is on the implementation plan

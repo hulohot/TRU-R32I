@@ -1,0 +1,11 @@
+---
+description: How to create new testbenches
+globs: *.sv, *.py
+---
+
+# Your rule content
+
+- Reference [test_alu.py](mdc:tb/test_alu.py) when creating new testbenches
+- Testbenches should be written in Python and use cocotb
+- Testbenches should test coverage
+- Testbenches should cover > 90$ of cases

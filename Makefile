@@ -7,6 +7,12 @@ RISCV_GCC = riscv64-unknown-elf-gcc
 RISCV_OBJCOPY = riscv64-unknown-elf-objcopy
 IVERILOG = iverilog
 
+# Coverage settings
+COVERAGE_DIR = coverage
+export COVERAGE = 1
+export COCOTB_ENABLE_COVERAGE = 1
+IVERILOG_COV_FLAGS = -g2012 -pfileline=1 -Wall
+
 # Directories
 RTL_DIR = rtl
 TEST_DIR = tests
@@ -26,8 +32,11 @@ TEST_HEX = $(BUILD_DIR)/test_program.hex
 
 # Cocotb configuration
 export COCOTB_REDUCED_LOG_FMT = 1
-export PYTHONPATH := $(TB_DIR):$(PYTHONPATH)
+export PYTHONPATH := $(TB_DIR):/usr/local/lib/python3.11/site-packages/cocotb/share:$(PYTHONPATH)
 export TOPLEVEL_LANG = verilog
+export COCOTB_SHARE_DIR = $(shell cocotb-config --share)
+export COCOTB_MAKEFILES = $(shell cocotb-config --makefiles)
+export IVERILOG_VERSION = 12.0
 
 # Default target
 all: compile test
@@ -36,6 +45,7 @@ all: compile test
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 	mkdir -p $(BUILD_DIR)/sim_build
+	mkdir -p $(COVERAGE_DIR)
 
 # Compile test program
 $(TEST_ELF): $(TEST_ASM) | $(BUILD_DIR)
@@ -64,24 +74,58 @@ test_system: $(RTL_SRCS) $(TB_DIR)/riscv_core_tb.sv $(TEST_HEX)
 
 # Individual unit tests
 test_alu: $(RTL_DIR)/core/alu.sv $(TB_DIR)/test_alu.py | $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)/sim_build
 	cd $(BUILD_DIR) && \
-	PYTHONPATH=../$(TB_DIR):$(PYTHONPATH) MODULE=test_alu TOPLEVEL=alu VERILOG_SOURCES=../$(RTL_DIR)/core/alu.sv make -f $(shell cocotb-config --makefiles)/Makefile.sim
+	PYTHONPATH=../$(TB_DIR):$(COCOTB_SHARE_DIR):$(PYTHONPATH) \
+	MODULE=test_alu \
+	TOPLEVEL=alu \
+	VERILOG_SOURCES=../$(RTL_DIR)/core/alu.sv \
+	make -f $(COCOTB_MAKEFILES)/Makefile.sim
 
 test_register_file: $(RTL_DIR)/core/register_file.sv $(TB_DIR)/test_register_file.py | $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)/sim_build
 	cd $(BUILD_DIR) && \
-	PYTHONPATH=../$(TB_DIR):$(PYTHONPATH) MODULE=test_register_file TOPLEVEL=register_file VERILOG_SOURCES=../$(RTL_DIR)/core/register_file.sv make -f $(shell cocotb-config --makefiles)/Makefile.sim
+	PYTHONPATH=../$(TB_DIR):$(COCOTB_SHARE_DIR):$(PYTHONPATH) \
+	MODULE=test_register_file \
+	TOPLEVEL=register_file \
+	VERILOG_SOURCES=../$(RTL_DIR)/core/register_file.sv \
+	make -f $(COCOTB_MAKEFILES)/Makefile.sim
 
 test_control_unit: $(RTL_DIR)/core/control_unit.sv $(TB_DIR)/test_control_unit.py | $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)/sim_build
 	cd $(BUILD_DIR) && \
-	PYTHONPATH=../$(TB_DIR):$(PYTHONPATH) MODULE=test_control_unit TOPLEVEL=control_unit VERILOG_SOURCES=../$(RTL_DIR)/core/control_unit.sv make -f $(shell cocotb-config --makefiles)/Makefile.sim
+	PYTHONPATH=../$(TB_DIR):$(COCOTB_SHARE_DIR):$(PYTHONPATH) \
+	MODULE=test_control_unit \
+	TOPLEVEL=control_unit \
+	VERILOG_SOURCES=../$(RTL_DIR)/core/control_unit.sv \
+	SIM_BUILD=sim_build \
+	IVERILOG_FLAGS="$(IVERILOG_COV_FLAGS)" \
+	make -f $(COCOTB_MAKEFILES)/Makefile.sim
 
 test_program_counter: $(RTL_DIR)/core/program_counter.sv $(TB_DIR)/test_program_counter.py | $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)/sim_build
 	cd $(BUILD_DIR) && \
-	PYTHONPATH=../$(TB_DIR):$(PYTHONPATH) MODULE=test_program_counter TOPLEVEL=program_counter VERILOG_SOURCES=../$(RTL_DIR)/core/program_counter.sv make -f $(shell cocotb-config --makefiles)/Makefile.sim
+	PYTHONPATH=../$(TB_DIR):$(COCOTB_SHARE_DIR):$(PYTHONPATH) \
+	MODULE=test_program_counter \
+	TOPLEVEL=program_counter \
+	VERILOG_SOURCES=../$(RTL_DIR)/core/program_counter.sv \
+	make -f $(COCOTB_MAKEFILES)/Makefile.sim
 
 test_instruction_memory: $(RTL_DIR)/memory/instruction_memory.sv $(TB_DIR)/test_instruction_memory.py | $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)/sim_build
 	cd $(BUILD_DIR) && \
-	PYTHONPATH=../$(TB_DIR):$(PYTHONPATH) MODULE=test_instruction_memory TOPLEVEL=instruction_memory VERILOG_SOURCES=../$(RTL_DIR)/memory/instruction_memory.sv make -f $(shell cocotb-config --makefiles)/Makefile.sim
+	PYTHONPATH=../$(TB_DIR):$(COCOTB_SHARE_DIR):$(PYTHONPATH) \
+	MODULE=test_instruction_memory \
+	TOPLEVEL=instruction_memory \
+	VERILOG_SOURCES=../$(RTL_DIR)/memory/instruction_memory.sv \
+	make -f $(COCOTB_MAKEFILES)/Makefile.sim
+
+# Coverage report target
+coverage: test
+	@echo "Generating coverage report..."
+	@mkdir -p $(COVERAGE_DIR)
+	@find $(BUILD_DIR) -name "*.json" -exec cp {} $(COVERAGE_DIR)/ \;
+	@$(PYTHON) $(TOOLS_DIR)/generate_coverage_report.py $(COVERAGE_DIR)
 
 # Clean build artifacts
 clean:

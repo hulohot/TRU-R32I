@@ -19,7 +19,9 @@ module data_memory #(
     
     // Internal signals
     logic [31:0] base_addr;
+    /* verilator lint_off UNUSEDSIGNAL */
     logic [31:0] local_addr;
+    /* verilator lint_on UNUSEDSIGNAL */
     
     // Calculate local address by subtracting base address
     assign local_addr = addr - BASE_ADDR;

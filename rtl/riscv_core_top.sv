@@ -18,7 +18,9 @@ module riscv_core_top #(
     logic [31:0] dmem_wdata;
     logic [31:0] dmem_rdata;
     logic        dmem_we;
+    /* verilator lint_off UNUSEDSIGNAL */
     logic [1:0]  dmem_size;
+    /* verilator lint_on UNUSEDSIGNAL */
     logic [3:0]  dmem_be;
 
     // CPU Core
