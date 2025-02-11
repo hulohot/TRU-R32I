@@ -1,0 +1,21 @@
+{
+    "access_patterns": {
+        "sequential": 40,
+        "unaligned": 12,
+        "word_aligned": 68,
+        "random": 20
+    },
+    "special_cases": {
+        "reset_access": 6,
+        "nop_read": 28,
+        "repeated_access": 12
+    },
+    "boundary_cases": {
+        "start_address": 5,
+        "end_address": 7,
+        "out_of_bounds": 4
+    },
+    "coverage_percentage": 90.0,
+    "covered_points": 9,
+    "total_points": 10
+}

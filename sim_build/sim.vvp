@@ -1,0 +1,91 @@
+#! /usr/local/Cellar/icarus-verilog/12.0/bin/vvp
+:ivl_version "12.0 (stable)";
+:ivl_delay_selection "TYPICAL";
+:vpi_time_precision - 12;
+:vpi_module "/usr/local/Cellar/icarus-verilog/12.0/lib/ivl/system.vpi";
+:vpi_module "/usr/local/Cellar/icarus-verilog/12.0/lib/ivl/vhdl_sys.vpi";
+:vpi_module "/usr/local/Cellar/icarus-verilog/12.0/lib/ivl/vhdl_textio.vpi";
+:vpi_module "/usr/local/Cellar/icarus-verilog/12.0/lib/ivl/v2005_math.vpi";
+:vpi_module "/usr/local/Cellar/icarus-verilog/12.0/lib/ivl/va_math.vpi";
+:vpi_module "/usr/local/Cellar/icarus-verilog/12.0/lib/ivl/v2009.vpi";
+S_0x7f9a1000ab90 .scope package, "$unit" "$unit" 2 1;
+ .timescale -9 -12;
+S_0x7f9a1000ad00 .scope module, "program_counter" "program_counter" 3 1;
+ .timescale -9 -12;
+    .port_info 0 /INPUT 1 "clk";
+    .port_info 1 /INPUT 1 "rst_n";
+    .port_info 2 /INPUT 1 "stall";
+    .port_info 3 /INPUT 1 "branch_taken";
+    .port_info 4 /INPUT 32 "branch_target";
+    .port_info 5 /OUTPUT 32 "pc";
+    .port_info 6 /OUTPUT 32 "pc_next";
+P_0x7f9a10006270 .param/l "PC_INCREMENT" 1 3 13, C4<00000000000000000000000000000100>;
+o0x7f9a00040008 .functor BUFZ 1, C4<z>; HiZ drive
+v0x7f9a1000af20_0 .net "branch_taken", 0 0, o0x7f9a00040008;  0 drivers
+o0x7f9a00040038 .functor BUFZ 32, C4<zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz>; HiZ drive
+v0x7f9a1001ae40_0 .net "branch_target", 31 0, o0x7f9a00040038;  0 drivers
+o0x7f9a00040068 .functor BUFZ 1, C4<z>; HiZ drive
+v0x7f9a1001aef0_0 .net "clk", 0 0, o0x7f9a00040068;  0 drivers
+v0x7f9a1001afa0_0 .var "pc", 31 0;
+v0x7f9a1001b050_0 .var "pc_next", 31 0;
+o0x7f9a000400f8 .functor BUFZ 1, C4<z>; HiZ drive
+v0x7f9a1001b140_0 .net "rst_n", 0 0, o0x7f9a000400f8;  0 drivers
+o0x7f9a00040128 .functor BUFZ 1, C4<z>; HiZ drive
+v0x7f9a1001b1e0_0 .net "stall", 0 0, o0x7f9a00040128;  0 drivers
+E_0x7f9a100061d0 .event anyedge, v0x7f9a1000af20_0, v0x7f9a1001ae40_0, v0x7f9a1001afa0_0;
+E_0x7f9a100057d0/0 .event negedge, v0x7f9a1001b140_0;
+E_0x7f9a100057d0/1 .event posedge, v0x7f9a1001aef0_0;
+E_0x7f9a100057d0 .event/or E_0x7f9a100057d0/0, E_0x7f9a100057d0/1;
+    .scope S_0x7f9a1000ad00;
+T_0 ;
+    %wait E_0x7f9a100057d0;
+    %load/vec4 v0x7f9a1001b140_0;
+    %nor/r;
+    %flag_set/vec4 8;
+    %jmp/0xz  T_0.0, 8;
+    %pushi/vec4 0, 0, 32;
+    %assign/vec4 v0x7f9a1001afa0_0, 0;
+    %jmp T_0.1;
+T_0.0 ;
+    %load/vec4 v0x7f9a1001b1e0_0;
+    %nor/r;
+    %flag_set/vec4 8;
+    %jmp/0xz  T_0.2, 8;
+    %load/vec4 v0x7f9a1000af20_0;
+    %flag_set/vec4 8;
+    %jmp/0xz  T_0.4, 8;
+    %load/vec4 v0x7f9a1001ae40_0;
+    %assign/vec4 v0x7f9a1001afa0_0, 0;
+    %jmp T_0.5;
+T_0.4 ;
+    %load/vec4 v0x7f9a1001b050_0;
+    %assign/vec4 v0x7f9a1001afa0_0, 0;
+T_0.5 ;
+T_0.2 ;
+T_0.1 ;
+    %jmp T_0;
+    .thread T_0;
+    .scope S_0x7f9a1000ad00;
+T_1 ;
+Ewait_0 .event/or E_0x7f9a100061d0, E_0x0;
+    %wait Ewait_0;
+    %load/vec4 v0x7f9a1000af20_0;
+    %flag_set/vec4 8;
+    %jmp/0xz  T_1.0, 8;
+    %load/vec4 v0x7f9a1001ae40_0;
+    %addi 4, 0, 32;
+    %store/vec4 v0x7f9a1001b050_0, 0, 32;
+    %jmp T_1.1;
+T_1.0 ;
+    %load/vec4 v0x7f9a1001afa0_0;
+    %addi 4, 0, 32;
+    %store/vec4 v0x7f9a1001b050_0, 0, 32;
+T_1.1 ;
+    %jmp T_1;
+    .thread T_1, $push;
+# The file index is used to find the file name in the following table.
+:file_names 4;
+    "N/A";
+    "<interactive>";
+    "-";
+    "/Users/ethan/Documents/workspace/repos/tru-r32i/rtl/core/program_counter.sv";

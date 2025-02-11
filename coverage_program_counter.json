@@ -1,0 +1,26 @@
+{
+    "operations": {
+        "reset": 9,
+        "increment": 16,
+        "stall": 5,
+        "branch": 4,
+        "branch_stall": 1
+    },
+    "transitions": {
+        "reset_to_increment": 7,
+        "increment_to_stall": 5,
+        "stall_to_increment": 5,
+        "increment_to_branch": 3,
+        "branch_to_increment": 2
+    },
+    "addresses": {
+        "zero": 7,
+        "word_aligned": 7,
+        "sequential": 9,
+        "branch_target": 1,
+        "near_max": 1
+    },
+    "coverage_percentage": 46.666666666666664,
+    "covered_points": 7,
+    "total_points": 15
+}

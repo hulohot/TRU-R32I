@@ -1,0 +1,5 @@
+cocotb==1.9.2
+pytest==7.4.3
+cocotb-test==0.2.4
+pytest-xdist==3.3.1
+pytest-cov==4.1.0 

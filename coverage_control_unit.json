@@ -1,0 +1,38 @@
+{
+    "instruction_types": {
+        "ADD": 25,
+        "SUB": 6,
+        "AND": 7,
+        "OR": 7,
+        "XOR": 7,
+        "SLL": 6,
+        "SRL": 6,
+        "SRA": 6,
+        "SLT": 6,
+        "SLTU": 6
+    },
+    "control_signals": {
+        "reg_write": 82,
+        "alu_op_add": 25,
+        "alu_op_sub": 6,
+        "alu_op_and": 7,
+        "alu_op_or": 7,
+        "alu_op_xor": 7,
+        "alu_op_sll": 6,
+        "alu_op_srl": 6,
+        "alu_op_sra": 6,
+        "alu_op_slt": 6,
+        "alu_op_sltu": 6
+    },
+    "register_usage": {
+        "x1_x15": 47,
+        "x16_x31": 33,
+        "x0": 13,
+        "same_rs1_rs2": 17,
+        "rd_equals_rs1": 18,
+        "rd_equals_rs2": 3
+    },
+    "coverage_percentage": 96.29629629629629,
+    "covered_points": 26,
+    "total_points": 27
+}
