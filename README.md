@@ -99,10 +99,10 @@ This project implements a basic RISC-V CPU supporting the RV32I base integer ins
 - [ ] Basic pipeline hazard detection
 
 ### Phase 3: Pipelining
-- [ ] Convert to 5-stage pipeline
-- [ ] Implement forwarding unit
-- [ ] Add pipeline registers
-- [ ] Handle data hazards
+- [x] Convert to 5-stage pipeline
+- [x] Implement forwarding unit
+- [x] Add pipeline registers
+- [x] Handle data hazards
 - [ ] Implement branch prediction
 
 ### Phase 4: Testing and Verification

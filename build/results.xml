@@ -1,11 +1,9 @@
 <testsuites name="results">
   <testsuite name="all" package="all">
-    <property name="random_seed" value="1739308776" />
-    <testcase name="test_initial_values" classname="test_instruction_memory" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_instruction_memory.py" lineno="106" time="0.0013837814331054688" sim_time_ns="91.0" ratio_time="65761.83046175052" />
-    <testcase name="test_word_alignment" classname="test_instruction_memory" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_instruction_memory.py" lineno="124" time="0.001051187515258789" sim_time_ns="141.001" ratio_time="134134.96445996827" />
-    <testcase name="test_sequential_access" classname="test_instruction_memory" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_instruction_memory.py" lineno="143" time="0.002331256866455078" sim_time_ns="341.001" ratio_time="146273.45656616893" />
-    <testcase name="test_memory_bounds" classname="test_instruction_memory" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_instruction_memory.py" lineno="163" time="0.0007359981536865234" sim_time_ns="101.00100000000009" ratio_time="137229.96381729847" />
-    <testcase name="test_repeated_access" classname="test_instruction_memory" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_instruction_memory.py" lineno="194" time="0.0009381771087646484" sim_time_ns="141.00099999999998" ratio_time="150292.5179933926" />
-    <testcase name="test_random_access" classname="test_instruction_memory" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_instruction_memory.py" lineno="216" time="0.0015010833740234375" sim_time_ns="221.0010000000001" ratio_time="147227.66491486665" />
+    <property name="random_seed" value="1739391394" />
+    <testcase name="test_if_id_reg" classname="test_pipeline_registers" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_pipeline_registers.py" lineno="6" time="7.200241088867188e-05" sim_time_ns="0.0" ratio_time="0.0" />
+    <testcase name="test_id_ex_reg" classname="test_pipeline_registers" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_pipeline_registers.py" lineno="62" time="0.00011706352233886719" sim_time_ns="0.001" ratio_time="8.54237067209776" />
+    <testcase name="test_ex_mem_reg" classname="test_pipeline_registers" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_pipeline_registers.py" lineno="123" time="4.315376281738281e-05" sim_time_ns="0.001" ratio_time="23.172950276243096" />
+    <testcase name="test_mem_wb_reg" classname="test_pipeline_registers" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_pipeline_registers.py" lineno="169" time="0.0005779266357421875" sim_time_ns="31.001" ratio_time="53641.75672607261" />
   </testsuite>
 </testsuites>

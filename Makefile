@@ -21,7 +21,7 @@ BUILD_DIR = build
 TOOLS_DIR = tools
 
 # Source files
-RTL_SRCS = $(wildcard $(RTL_DIR)/*.sv) $(wildcard $(RTL_DIR)/core/*.sv) $(wildcard $(RTL_DIR)/memory/*.sv)
+RTL_SRCS = $(wildcard $(RTL_DIR)/*.sv) $(wildcard $(RTL_DIR)/core/*.sv) $(wildcard $(RTL_DIR)/memory/*.sv) $(wildcard $(RTL_DIR)/pipeline/*.sv)
 TEST_SRCS = $(wildcard $(TEST_DIR)/*.sv)
 
 # Test program
@@ -65,7 +65,7 @@ compile: $(BUILD_DIR)
 test: compile $(TEST_HEX) test_units test_system
 
 # Unit tests
-test_units: test_alu test_register_file test_control_unit test_program_counter test_instruction_memory
+test_units: test_alu test_register_file test_control_unit test_program_counter test_instruction_memory test_pipeline_registers test_forwarding_unit test_hazard_detection
 
 # System test
 test_system: $(RTL_SRCS) $(TB_DIR)/riscv_core_tb.sv $(TEST_HEX)
@@ -120,6 +120,58 @@ test_instruction_memory: $(RTL_DIR)/memory/instruction_memory.sv $(TB_DIR)/test_
 	VERILOG_SOURCES=../$(RTL_DIR)/memory/instruction_memory.sv \
 	make -f $(COCOTB_MAKEFILES)/Makefile.sim
 
+# Pipeline component tests
+test_pipeline_registers: $(RTL_DIR)/pipeline/if_id_reg.sv $(RTL_DIR)/pipeline/id_ex_reg.sv $(RTL_DIR)/pipeline/ex_mem_reg.sv $(RTL_DIR)/pipeline/mem_wb_reg.sv $(TB_DIR)/test_pipeline_registers.py | $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)/sim_build
+	cd $(BUILD_DIR) && \
+	PYTHONPATH=../$(TB_DIR):$(COCOTB_SHARE_DIR):$(PYTHONPATH) \
+	MODULE=test_pipeline_registers \
+	TOPLEVEL=if_id_reg \
+	VERILOG_SOURCES="../$(RTL_DIR)/pipeline/if_id_reg.sv" \
+	make -f $(COCOTB_MAKEFILES)/Makefile.sim
+
+	rm -rf $(BUILD_DIR)/sim_build
+	cd $(BUILD_DIR) && \
+	PYTHONPATH=../$(TB_DIR):$(COCOTB_SHARE_DIR):$(PYTHONPATH) \
+	MODULE=test_pipeline_registers \
+	TOPLEVEL=id_ex_reg \
+	VERILOG_SOURCES="../$(RTL_DIR)/pipeline/id_ex_reg.sv" \
+	make -f $(COCOTB_MAKEFILES)/Makefile.sim
+
+	rm -rf $(BUILD_DIR)/sim_build
+	cd $(BUILD_DIR) && \
+	PYTHONPATH=../$(TB_DIR):$(COCOTB_SHARE_DIR):$(PYTHONPATH) \
+	MODULE=test_pipeline_registers \
+	TOPLEVEL=ex_mem_reg \
+	VERILOG_SOURCES="../$(RTL_DIR)/pipeline/ex_mem_reg.sv" \
+	make -f $(COCOTB_MAKEFILES)/Makefile.sim
+	
+	rm -rf $(BUILD_DIR)/sim_build
+	cd $(BUILD_DIR) && \
+	PYTHONPATH=../$(TB_DIR):$(COCOTB_SHARE_DIR):$(PYTHONPATH) \
+	MODULE=test_pipeline_registers \
+	TOPLEVEL=mem_wb_reg \
+	VERILOG_SOURCES="../$(RTL_DIR)/pipeline/mem_wb_reg.sv" \
+	make -f $(COCOTB_MAKEFILES)/Makefile.sim
+
+test_forwarding_unit: $(RTL_DIR)/pipeline/forwarding_unit.sv $(TB_DIR)/test_forwarding_unit.py | $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)/sim_build
+	cd $(BUILD_DIR) && \
+	PYTHONPATH=../$(TB_DIR):$(COCOTB_SHARE_DIR):$(PYTHONPATH) \
+	MODULE=test_forwarding_unit \
+	TOPLEVEL=forwarding_unit \
+	VERILOG_SOURCES=../$(RTL_DIR)/pipeline/forwarding_unit.sv \
+	make -f $(COCOTB_MAKEFILES)/Makefile.sim
+
+test_hazard_detection: $(RTL_DIR)/pipeline/hazard_detection.sv $(TB_DIR)/test_hazard_detection.py | $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)/sim_build
+	cd $(BUILD_DIR) && \
+	PYTHONPATH=../$(TB_DIR):$(COCOTB_SHARE_DIR):$(PYTHONPATH) \
+	MODULE=test_hazard_detection \
+	TOPLEVEL=hazard_detection \
+	VERILOG_SOURCES=../$(RTL_DIR)/pipeline/hazard_detection.sv \
+	make -f $(COCOTB_MAKEFILES)/Makefile.sim
+
 # Coverage report target
 coverage: test
 	@echo "Generating coverage report..."
@@ -131,4 +183,4 @@ coverage: test
 clean:
 	rm -rf $(BUILD_DIR)
 
-.PHONY: all compile test test_units test_system test_alu test_register_file test_control_unit test_program_counter test_instruction_memory clean 
+.PHONY: all compile test test_units test_system test_alu test_register_file test_control_unit test_program_counter test_instruction_memory test_pipeline_registers test_forwarding_unit test_hazard_detection clean 

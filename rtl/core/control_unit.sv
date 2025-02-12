@@ -24,13 +24,29 @@ module control_unit (
     // R-type instruction format:
     // funct7[31:25] | rs2[24:20] | rs1[19:15] | funct3[14:12] | rd[11:7] | opcode[6:0]
     
-    // Instruction field decoding
-    assign opcode = instruction[6:0];
-    assign rd     = instruction[11:7];
-    assign funct3 = instruction[14:12];
-    assign rs1    = instruction[19:15];
-    assign rs2    = instruction[24:20];
-    assign funct7 = instruction[31:25];
+    // Internal instruction field wires
+    logic [6:0] opcode_int;
+    logic [4:0] rd_int;
+    logic [2:0] funct3_int;
+    logic [4:0] rs1_int;
+    logic [4:0] rs2_int;
+    logic [6:0] funct7_int;
+    
+    // Instruction field decoding to internal wires
+    assign opcode_int = instruction[6:0];
+    assign rd_int     = instruction[11:7];
+    assign funct3_int = instruction[14:12];
+    assign rs1_int    = instruction[19:15];
+    assign rs2_int    = instruction[24:20];
+    assign funct7_int = instruction[31:25];
+    
+    // Output assignments
+    assign opcode = opcode_int;
+    assign rd     = rd_int;
+    assign funct3 = funct3_int;
+    assign rs1    = rs1_int;
+    assign rs2    = rs2_int;
+    assign funct7 = funct7_int;
 
     // ALU operation codes (matching ALU module)
     localparam ALU_ADD  = 4'b0000;  // Addition
@@ -58,17 +74,17 @@ module control_unit (
         jump = 1'b0;
         result_src = 2'b00;  // Default to ALU result
 
-        case (opcode)
+        case (opcode_int)
             7'b0110011: begin // R-type
                 reg_write = 1'b1;
                 alu_src = 1'b0;  // Use rs2
-                case (funct3)
-                    3'b000:  alu_op = (funct7[5]) ? ALU_SUB : ALU_ADD;
+                case (funct3_int)
+                    3'b000:  alu_op = (funct7_int[5]) ? ALU_SUB : ALU_ADD;
                     3'b001:  alu_op = ALU_SLL;
                     3'b010:  alu_op = ALU_SLT;
                     3'b011:  alu_op = ALU_SLTU;
                     3'b100:  alu_op = ALU_XOR;
-                    3'b101:  alu_op = (funct7[5]) ? ALU_SRA : ALU_SRL;
+                    3'b101:  alu_op = (funct7_int[5]) ? ALU_SRA : ALU_SRL;
                     3'b110:  alu_op = ALU_OR;
                     3'b111:  alu_op = ALU_AND;
                 endcase
@@ -77,13 +93,13 @@ module control_unit (
             7'b0010011: begin // I-type ALU
                 reg_write = 1'b1;
                 alu_src = 1'b1;  // Use immediate
-                case (funct3)
+                case (funct3_int)
                     3'b000:  alu_op = ALU_ADD;  // ADDI
                     3'b001:  alu_op = ALU_SLL;  // SLLI
                     3'b010:  alu_op = ALU_SLT;  // SLTI
                     3'b011:  alu_op = ALU_SLTU; // SLTIU
                     3'b100:  alu_op = ALU_XOR;  // XORI
-                    3'b101:  alu_op = (funct7[5]) ? ALU_SRA : ALU_SRL; // SRAI/SRLI
+                    3'b101:  alu_op = (funct7_int[5]) ? ALU_SRA : ALU_SRL; // SRAI/SRLI
                     3'b110:  alu_op = ALU_OR;   // ORI
                     3'b111:  alu_op = ALU_AND;  // ANDI
                 endcase
@@ -95,7 +111,7 @@ module control_unit (
                 alu_op = ALU_ADD; // Add for address
                 mem_read = 1'b1;
                 result_src = 2'b01; // From memory
-                case (funct3)
+                case (funct3_int)
                     3'b000:  mem_size = 2'b00; // LB
                     3'b001:  mem_size = 2'b01; // LH
                     3'b010:  mem_size = 2'b10; // LW
@@ -107,7 +123,7 @@ module control_unit (
                 alu_src = 1'b1;  // Use immediate
                 alu_op = ALU_ADD; // Add for address
                 mem_write = 1'b1;
-                case (funct3)
+                case (funct3_int)
                     3'b000:  mem_size = 2'b00; // SB
                     3'b001:  mem_size = 2'b01; // SH
                     3'b010:  mem_size = 2'b10; // SW
@@ -118,7 +134,7 @@ module control_unit (
             7'b1100011: begin // Branch
                 alu_src = 1'b0;  // Use rs2
                 branch = 1'b1;
-                case (funct3)
+                case (funct3_int)
                     3'b000:  alu_op = ALU_SUB; // BEQ
                     3'b001:  alu_op = ALU_SUB; // BNE
                     3'b100:  alu_op = ALU_SLT; // BLT
@@ -173,41 +189,41 @@ module control_unit (
     // pragma translate_off
     always_comb begin
         // Check for valid opcode
-        assert ((opcode == 7'b0110011) || // R-type
-                (opcode == 7'b0010011) || // I-type ALU
-                (opcode == 7'b0000011) || // Load
-                (opcode == 7'b0100011) || // Store
-                (opcode == 7'b1100011) || // Branch
-                (opcode == 7'b1101111) || // JAL
-                (opcode == 7'b1100111) || // JALR
-                (opcode == 7'b0110111) || // LUI
-                (opcode == 7'b0010111))   // AUIPC
-        else $warning("Invalid opcode: %b", opcode);
+        assert ((opcode_int == 7'b0110011) || // R-type
+                (opcode_int == 7'b0010011) || // I-type ALU
+                (opcode_int == 7'b0000011) || // Load
+                (opcode_int == 7'b0100011) || // Store
+                (opcode_int == 7'b1100011) || // Branch
+                (opcode_int == 7'b1101111) || // JAL
+                (opcode_int == 7'b1100111) || // JALR
+                (opcode_int == 7'b0110111) || // LUI
+                (opcode_int == 7'b0010111))   // AUIPC
+        else $warning("Invalid opcode: %b", opcode_int);
 
         // Check for valid funct3 based on opcode
-        unique case (opcode)
+        unique case (opcode_int)
             7'b0110011: // R-type
-                assert ((funct3 == 3'b000) || (funct3 == 3'b001) || 
-                        (funct3 == 3'b010) || (funct3 == 3'b011) ||
-                        (funct3 == 3'b100) || (funct3 == 3'b101) ||
-                        (funct3 == 3'b110) || (funct3 == 3'b111))
-                else $error("Invalid funct3 for R-type: %b", funct3);
+                assert ((funct3_int == 3'b000) || (funct3_int == 3'b001) || 
+                        (funct3_int == 3'b010) || (funct3_int == 3'b011) ||
+                        (funct3_int == 3'b100) || (funct3_int == 3'b101) ||
+                        (funct3_int == 3'b110) || (funct3_int == 3'b111))
+                else $error("Invalid funct3 for R-type: %b", funct3_int);
             
             7'b1100011: // Branch
-                assert ((funct3 == 3'b000) || (funct3 == 3'b001) ||
-                        (funct3 == 3'b100) || (funct3 == 3'b101) ||
-                        (funct3 == 3'b110) || (funct3 == 3'b111))
-                else $error("Invalid funct3 for branch: %b", funct3);
+                assert ((funct3_int == 3'b000) || (funct3_int == 3'b001) ||
+                        (funct3_int == 3'b100) || (funct3_int == 3'b101) ||
+                        (funct3_int == 3'b110) || (funct3_int == 3'b111))
+                else $error("Invalid funct3 for branch: %b", funct3_int);
             
             7'b0000011: // Load
-                assert ((funct3 == 3'b000) || (funct3 == 3'b001) ||
-                        (funct3 == 3'b010))
-                else $error("Invalid funct3 for load: %b", funct3);
+                assert ((funct3_int == 3'b000) || (funct3_int == 3'b001) ||
+                        (funct3_int == 3'b010))
+                else $error("Invalid funct3 for load: %b", funct3_int);
             
             7'b0100011: // Store
-                assert ((funct3 == 3'b000) || (funct3 == 3'b001) ||
-                        (funct3 == 3'b010))
-                else $error("Invalid funct3 for store: %b", funct3);
+                assert ((funct3_int == 3'b000) || (funct3_int == 3'b001) ||
+                        (funct3_int == 3'b010))
+                else $error("Invalid funct3 for store: %b", funct3_int);
                 
             default: begin end // Other opcodes don't care about funct3
         endcase
