@@ -39,7 +39,7 @@ export COCOTB_MAKEFILES = $(shell cocotb-config --makefiles)
 export IVERILOG_VERSION = 12.0
 
 # Default target
-all: compile test
+all: compile test test_programs
 
 # Create build directory
 $(BUILD_DIR):
@@ -183,4 +183,21 @@ coverage: test
 clean:
 	rm -rf $(BUILD_DIR)
 
-.PHONY: all compile test test_units test_system test_alu test_register_file test_control_unit test_program_counter test_instruction_memory test_pipeline_registers test_forwarding_unit test_hazard_detection clean 
+# Add program tests to the test targets
+test_programs: build/sim_build
+	cd build && \
+	PYTHONPATH=../tb:/usr/local/lib/python3.11/site-packages/cocotb/share:tb:/usr/local/lib/python3.11/site-packages/cocotb/share: \
+	MODULE=test_programs \
+	TOPLEVEL=riscv_core_top \
+	VERILOG_SOURCES="../rtl/riscv_core_top.sv ../rtl/core/alu.sv ../rtl/core/control_unit.sv ../rtl/core/cpu_core.sv ../rtl/core/cpu_core_pipelined.sv ../rtl/core/immediate_gen.sv ../rtl/core/program_counter.sv ../rtl/core/register_file.sv ../rtl/memory/data_memory.sv ../rtl/memory/instruction_memory.sv ../rtl/pipeline/ex_mem_reg.sv ../rtl/pipeline/forwarding_unit.sv ../rtl/pipeline/hazard_detection.sv ../rtl/pipeline/id_ex_reg.sv ../rtl/pipeline/if_id_reg.sv ../rtl/pipeline/mem_wb_reg.sv" \
+	make -f /usr/local/lib/python3.11/site-packages/cocotb/share/makefiles/Makefile.sim
+
+# Create programs directory
+$(shell mkdir -p tb/programs)
+
+# Rule to assemble RISC-V programs
+%.hex: %.s
+	riscv64-unknown-elf-as -march=rv32i -mabi=ilp32 -o $*.o $<
+	riscv64-unknown-elf-objcopy -O verilog $*.o $@
+
+.PHONY: all compile test test_units test_system test_alu test_register_file test_control_unit test_program_counter test_instruction_memory test_pipeline_registers test_forwarding_unit test_hazard_detection clean test_programs 

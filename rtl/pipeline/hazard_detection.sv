@@ -2,14 +2,17 @@ module hazard_detection (
     // Instruction fields from ID stage
     input  logic [4:0]  id_rs1_addr,     // Source register 1 address
     input  logic [4:0]  id_rs2_addr,     // Source register 2 address
+    input  logic        id_branch,        // Branch instruction in ID
+    input  logic        id_jump,          // Jump instruction in ID
     
     // Control signals from EX stage
     input  logic [4:0]  ex_rd_addr,      // Destination register address
     input  logic        ex_mem_read,      // Memory read signal
     input  logic        ex_reg_write,     // Register write enable
+    input  logic        ex_branch_taken,  // Branch taken signal from EX stage
     
     // Control signals from MEM stage
-    input  logic [4:0]  mem_rd_addr,     // Destination register address
+    input  logic [4:0]  mem_rd_addr,     // Destination register address (for assertions)
     
     // Hazard control outputs
     output logic        stall_if,         // Stall fetch stage
@@ -21,35 +24,60 @@ module hazard_detection (
 
     // Internal signals
     logic load_use_hazard;
+    logic branch_hazard;
+    logic jump_hazard;
+    logic control_hazard;
+    logic rs1_ex_dependency;
+    logic rs2_ex_dependency;
 
-    // Load-use hazard detection
-    assign load_use_hazard = ex_mem_read && ex_reg_write && 
-                            (ex_rd_addr != 5'b0) &&
-                            ((ex_rd_addr == id_rs1_addr) || (ex_rd_addr == id_rs2_addr));
+    // Register dependency checks for EX stage only
+    assign rs1_ex_dependency = ex_reg_write && (ex_rd_addr == id_rs1_addr) && (id_rs1_addr != 5'b0);
+    assign rs2_ex_dependency = ex_reg_write && (ex_rd_addr == id_rs2_addr) && (id_rs2_addr != 5'b0);
 
-    // Stall and flush control
-    assign stall_if = load_use_hazard;
-    assign stall_id = load_use_hazard;
-    assign flush_if = 1'b0;  // No need to flush IF stage
-    assign flush_id = 1'b0;  // No need to flush ID stage
-    assign flush_ex = load_use_hazard;
+    // Load-use hazard detection - only check EX stage dependencies
+    assign load_use_hazard = ex_mem_read && (rs1_ex_dependency || rs2_ex_dependency);
+
+    // Control hazard detection
+    assign branch_hazard = id_branch && ex_branch_taken;  // Only flush on taken branches
+    assign jump_hazard = id_jump;  // Always flush on jumps
+    assign control_hazard = branch_hazard || jump_hazard;
+
+    // Hazard resolution
+    always_comb begin
+        // Default values
+        stall_if = 1'b0;
+        stall_id = 1'b0;
+        flush_if = 1'b0;
+        flush_id = 1'b0;
+        flush_ex = 1'b0;
+
+        // Priority: Load-use hazard takes precedence over control hazards
+        if (load_use_hazard) begin
+            // Load-use hazard: stall IF/ID and flush EX
+            stall_if = 1'b1;
+            stall_id = 1'b1;
+            flush_ex = 1'b1;  // Flush EX to prevent incorrect execution
+        end else if (control_hazard) begin
+            // Control hazard (branch or jump): only flush pipeline
+            flush_if = 1'b1;
+            flush_id = 1'b1;
+            flush_ex = 1'b1;
+        end
+    end
 
     // Assertions
     // pragma translate_off
     always_comb begin
         // Check that register addresses are valid
-        assert ({1'b0, id_rs1_addr} < 6'd32) else $error("Invalid rs1_addr: %d", id_rs1_addr);
-        assert ({1'b0, id_rs2_addr} < 6'd32) else $error("Invalid rs2_addr: %d", id_rs2_addr);
-        assert ({1'b0, ex_rd_addr} < 6'd32) else $error("Invalid ex_rd_addr: %d", ex_rd_addr);
-        assert ({1'b0, mem_rd_addr} < 6'd32) else $error("Invalid mem_rd_addr: %d", mem_rd_addr);
+        assert (!$isunknown(id_rs1_addr)) else $error("Invalid rs1_addr: %d", id_rs1_addr);
+        assert (!$isunknown(id_rs2_addr)) else $error("Invalid rs2_addr: %d", id_rs2_addr);
+        assert (!$isunknown(ex_rd_addr)) else $error("Invalid ex_rd_addr: %d", ex_rd_addr);
+        assert (!$isunknown(mem_rd_addr)) else $error("Invalid mem_rd_addr: %d", mem_rd_addr);
 
         // Verify hazard detection logic
         if (load_use_hazard) begin
-            assert (ex_mem_read && ex_reg_write) 
-            else $error("Load-use hazard detected without load instruction");
-            
-            assert (ex_rd_addr != 5'b0 && 
-                   (ex_rd_addr == id_rs1_addr || ex_rd_addr == id_rs2_addr))
+            assert (ex_mem_read) else $error("Load-use hazard detected without load instruction");
+            assert (rs1_ex_dependency || rs2_ex_dependency) 
             else $error("Load-use hazard detected without register dependency");
         end
 

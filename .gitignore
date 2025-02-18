@@ -1,1 +1,6 @@
 **coverage*.json
+.venv
+build
+coverage
+htmlcov
+sim_build

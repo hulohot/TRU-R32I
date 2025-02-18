@@ -2,7 +2,10 @@ module riscv_core_top #(
     parameter IMEM_DEPTH = 1024,  // Instruction memory depth in words
     parameter DMEM_DEPTH = 1024,  // Data memory depth in words
     parameter IMEM_INIT_FILE = "", // Optional instruction memory initialization file
-    parameter DMEM_INIT_FILE = ""  // Optional data memory initialization file
+    parameter DMEM_INIT_FILE = "", // Optional data memory initialization file
+    /* verilator lint_off UNUSEDPARAM */
+    parameter IMEM_BASE_ADDR = 32'h00000000,  // Instruction memory base address
+    parameter DMEM_BASE_ADDR = 32'h00001000   // Data memory base address
 ) (
     input  logic        clk,          // Clock
     input  logic        rst_n,        // Active-low reset
@@ -24,8 +27,8 @@ module riscv_core_top #(
     logic [3:0]  dmem_be;
 
     // CPU Core
-    cpu_core #(
-        .DMEM_BASE_ADDR(32'h00001000)  // Data memory base address from linker script
+    cpu_core_pipelined #(
+        .DMEM_BASE_ADDR(DMEM_BASE_ADDR)  // Pass data memory base address
     ) cpu (
         .clk(clk),
         .rst_n(rst_n),
@@ -49,7 +52,6 @@ module riscv_core_top #(
         .DEPTH(IMEM_DEPTH),
         .INIT_FILE(IMEM_INIT_FILE)
     ) imem (
-        .clk(clk),
         .addr(imem_addr),
         .rdata(imem_data)
     );
@@ -58,7 +60,7 @@ module riscv_core_top #(
     data_memory #(
         .DEPTH(DMEM_DEPTH),
         .INIT_FILE(DMEM_INIT_FILE),
-        .BASE_ADDR(32'h00001000)  // Data memory base address from linker script
+        .BASE_ADDR(DMEM_BASE_ADDR)  // Pass data memory base address
     ) dmem (
         .clk(clk),
         .rst_n(rst_n),

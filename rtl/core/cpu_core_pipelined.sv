@@ -29,9 +29,8 @@ module cpu_core_pipelined #(
     // Pipeline stage signals
     logic [31:0] if_pc;          // Current program counter
     logic [31:0] if_instruction; // Current instruction
-    logic [31:0] if_pc_plus4;    // PC + 4
     logic        if_branch_taken;
-    logic [31:0] if_branch_target;
+    logic [29:0] if_branch_target;  // Word-aligned branch target (30 bits)
 
     // ID stage signals
     logic [31:0] id_pc;
@@ -61,11 +60,16 @@ module cpu_core_pipelined #(
     logic        ex_mem_write;
     logic        ex_mem_read;
     logic [1:0]  ex_result_src;
+    logic [31:0] ex_pc_plus4;
+    
+    // ALU signals
     logic [31:0] ex_alu_result;
     logic        ex_alu_zero;
     logic        ex_alu_negative;
-    logic [31:0] ex_pc_plus4;
-    
+    logic        unused_overflow;  // For ALU overflow output
+    logic [31:0] ex_alu_input_a;
+    logic [31:0] ex_alu_input_b;
+
     // Memory stage signals
     logic [4:0]  mem_rd_addr;
     logic        mem_reg_write;
@@ -126,66 +130,66 @@ module cpu_core_pipelined #(
         .forward_b(forward_b)
     );
 
-    // ALU input A forwarding mux
-    logic [31:0] alu_input_a;
+    // ALU input forwarding muxes
     always_comb begin
+        // Input A forwarding
         case (forward_a)
-            2'b00:   alu_input_a = ex_rs1_data;      // From register file
-            2'b01:   alu_input_a = mem_alu_result;    // From MEM stage
-            2'b10:   alu_input_a = wb_write_data;     // From WB stage
-            default: alu_input_a = ex_rs1_data;
+            2'b00:   ex_alu_input_a = ex_rs1_data;      // From register file
+            2'b01:   ex_alu_input_a = mem_alu_result;    // From MEM stage
+            2'b10:   ex_alu_input_a = wb_write_data;     // From WB stage
+            default: ex_alu_input_a = ex_rs1_data;
         endcase
-    end
 
-    // ALU input B forwarding mux
-    logic [31:0] alu_input_b;
-    always_comb begin
+        // Input B forwarding
         if (ex_alu_src) begin
-            alu_input_b = ex_imm;  // Use immediate
+            ex_alu_input_b = ex_imm;  // Use immediate
         end else begin
             case (forward_b)
-                2'b00:   alu_input_b = ex_rs2_data;   // From register file
-                2'b01:   alu_input_b = mem_rs2_data; // From MEM stage
-                2'b10:   alu_input_b = wb_write_data;  // From WB stage
-                default: alu_input_b = ex_rs2_data;
+                2'b00:   ex_alu_input_b = ex_rs2_data;   // From register file
+                2'b01:   ex_alu_input_b = mem_alu_result; // From MEM stage
+                2'b10:   ex_alu_input_b = wb_write_data;  // From WB stage
+                default: ex_alu_input_b = ex_rs2_data;
             endcase
         end
     end
 
-    // Additional signal declarations
-    /* verilator lint_off UNUSEDSIGNAL */
-    logic        ex_overflow; // ALU overflow flag
-    logic [31:0] s_type_imm; // S-type immediate
-    logic [31:0] b_type_imm; // B-type immediate
-    logic [31:0] u_type_imm; // U-type immediate
-    logic [31:0] j_type_imm; // J-type immediate
-    /* verilator lint_on UNUSEDSIGNAL */
-
-    // Update ALU instance to use forwarded inputs
-    alu alu_unit (
-        .a(alu_input_a),
-        .b(alu_input_b),
+    // Single ALU instance
+    alu alu_inst (
+        .a(ex_alu_input_a),
+        .b(ex_alu_input_b),
         .op(ex_alu_op),
         .result(ex_alu_result),
         .zero(ex_alu_zero),
         .negative(ex_alu_negative),
-        .overflow(ex_overflow)
+        .overflow(unused_overflow)  // Connect to unused signal
     );
 
-    // Program Counter
-    program_counter pc (
-        .clk(clk),
-        .rst_n(rst_n),
-        .stall(stall_if),
-        .branch_taken(if_branch_taken),
-        .branch_target(if_branch_target),
-        .pc_current(if_pc)
-    );
+    // Branch/Jump logic
+    always_comb begin
+        if (ex_jump) begin
+            if (ex_funct3 == 3'b000)  // JALR
+                if_branch_target = ex_alu_result[31:2];  // Word-aligned JALR target
+            else
+                if_branch_target = 30'((ex_pc + ex_imm) >> 2);  // Word-aligned JAL target
+            if_branch_taken = 1'b1;
+        end else if (ex_branch) begin
+            if_branch_target = 30'((ex_pc + ex_imm) >> 2);  // Word-aligned branch target
+            case (ex_funct3)
+                3'b000:  if_branch_taken = ex_alu_zero;         // BEQ
+                3'b001:  if_branch_taken = !ex_alu_zero;        // BNE
+                3'b100:  if_branch_taken = ex_alu_negative;     // BLT
+                3'b101:  if_branch_taken = !ex_alu_negative;    // BGE
+                3'b110:  if_branch_taken = ex_alu_negative;     // BLTU
+                3'b111:  if_branch_taken = !ex_alu_negative;    // BGEU
+                default: if_branch_taken = 1'b0;
+            endcase
+        end else begin
+            if_branch_target = if_pc[31:2] + 1;  // Next word-aligned address
+            if_branch_taken = 1'b0;
+        end
+    end
 
-    // IF stage
-    assign if_pc_plus4 = if_pc + 32'd4;
-    assign if_instruction = imem_data;
-    assign imem_addr = if_pc;
+    assign ex_pc_plus4 = ex_pc + 32'd4;
 
     // IF/ID Pipeline Register
     if_id_reg if_id (
@@ -298,52 +302,6 @@ module cpu_core_pipelined #(
         .ex_funct3(ex_funct3)
     );
 
-    // EX stage
-    logic [31:0] ex_alu_input_a;
-    logic [31:0] ex_alu_input_b;
-    
-    // ALU input selection (will be modified for forwarding)
-    assign ex_alu_input_a = ex_rs1_data;
-    assign ex_alu_input_b = ex_alu_src ? ex_imm : ex_rs2_data;
-    
-    // ALU
-    alu alu_inst (
-        .a(ex_alu_input_a),
-        .b(ex_alu_input_b),
-        .op(ex_alu_op),
-        .result(ex_alu_result),
-        .zero(ex_alu_zero),
-        .negative(ex_alu_negative),
-        .overflow(ex_overflow)
-    );
-
-    // Branch/Jump logic
-    always_comb begin
-        if (ex_jump) begin
-            if (ex_funct3 == 3'b000)  // JALR
-                if_branch_target = {ex_alu_result[31:1], 1'b0};
-            else
-                if_branch_target = ex_pc + ex_imm;  // JAL
-            if_branch_taken = 1'b1;
-        end else if (ex_branch) begin
-            if_branch_target = ex_pc + ex_imm;
-            case (ex_funct3)
-                3'b000:  if_branch_taken = ex_alu_zero;         // BEQ
-                3'b001:  if_branch_taken = !ex_alu_zero;        // BNE
-                3'b100:  if_branch_taken = ex_alu_negative;     // BLT
-                3'b101:  if_branch_taken = !ex_alu_negative;    // BGE
-                3'b110:  if_branch_taken = ex_alu_negative;     // BLTU
-                3'b111:  if_branch_taken = !ex_alu_negative;    // BGEU
-                default: if_branch_taken = 1'b0;
-            endcase
-        end else begin
-            if_branch_target = if_pc_plus4;
-            if_branch_taken = 1'b0;
-        end
-    end
-
-    assign ex_pc_plus4 = ex_pc + 32'd4;
-
     // EX/MEM Pipeline Register
     ex_mem_reg ex_mem (
         .clk(clk),
@@ -384,7 +342,7 @@ module cpu_core_pipelined #(
     assign mem_addr_offset = mem_addr_valid ? (mem_alu_result - DMEM_BASE_ADDR) : 32'h0;
     
     // Memory interface signals
-    assign dmem_addr = {mem_addr_offset[31:2], 2'b00};
+    assign dmem_addr = {mem_addr_offset[31:2], 2'b00};  // Word-aligned address
     assign dmem_wdata = mem_rs2_data;
     assign dmem_we = mem_mem_write && mem_addr_valid;
     assign dmem_size = mem_mem_size;
@@ -459,11 +417,14 @@ module cpu_core_pipelined #(
         // ID stage signals
         .id_rs1_addr(id_instruction[19:15]),
         .id_rs2_addr(id_instruction[24:20]),
+        .id_branch(id_branch),
+        .id_jump(id_jump),
         
         // EX stage signals
         .ex_rd_addr(ex_rd_addr),
         .ex_mem_read(ex_mem_read),
         .ex_reg_write(ex_reg_write),
+        .ex_branch_taken(ex_alu_zero && ex_branch),
         
         // MEM stage signals
         .mem_rd_addr(mem_rd_addr),
@@ -475,5 +436,22 @@ module cpu_core_pipelined #(
         .flush_id(flush_id),
         .flush_ex(flush_ex)
     );
+
+    // Program Counter
+    program_counter #(
+        .RESET_ADDR(32'h0),  // Start at instruction memory base
+        .MAX_ADDR(32'h1000)  // Maximum valid instruction address
+    ) pc (
+        .clk(clk),
+        .rst_n(rst_n),
+        .stall(stall_if),
+        .branch_taken(if_branch_taken),
+        .branch_target(if_branch_target),
+        .pc_current(if_pc)
+    );
+
+    // IF stage
+    assign if_instruction = imem_data;
+    assign imem_addr = if_pc;
 
 endmodule 

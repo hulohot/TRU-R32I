@@ -31,9 +31,15 @@ async def test_load_use_hazard(dut):
     
     # Set up load-use hazard (EX stage load followed by dependent instruction)
     dut.id_rs1_addr.value = 5
+    dut.id_rs2_addr.value = 0
     dut.ex_rd_addr.value = 5
+    dut.mem_rd_addr.value = 0
+    dut.id_branch.value = 0
+    dut.id_jump.value = 0
     dut.ex_mem_read.value = 1
+    dut.ex_branch_taken.value = 0
     dut.ex_reg_write.value = 1
+    dut.mem_reg_write.value = 0
     
     await Timer(1, units="ns")
     assert dut.stall_if.value == 1, "IF stage should stall on load-use hazard"
@@ -54,8 +60,16 @@ async def test_branch_hazard(dut):
     """Test detection of control hazards from branches"""
     
     # Set up branch instruction
+    dut.id_rs1_addr.value = 0
+    dut.id_rs2_addr.value = 0
+    dut.ex_rd_addr.value = 0
+    dut.mem_rd_addr.value = 0
     dut.id_branch.value = 1
+    dut.id_jump.value = 0
+    dut.ex_mem_read.value = 0
     dut.ex_branch_taken.value = 1
+    dut.ex_reg_write.value = 0
+    dut.mem_reg_write.value = 0
     
     await Timer(1, units="ns")
     assert dut.flush_if.value == 1, "IF stage should be flushed on taken branch"
@@ -75,7 +89,16 @@ async def test_jump_hazard(dut):
     """Test detection of control hazards from jumps"""
     
     # Set up jump instruction
+    dut.id_rs1_addr.value = 0
+    dut.id_rs2_addr.value = 0
+    dut.ex_rd_addr.value = 0
+    dut.mem_rd_addr.value = 0
+    dut.id_branch.value = 0
     dut.id_jump.value = 1
+    dut.ex_mem_read.value = 0
+    dut.ex_branch_taken.value = 0
+    dut.ex_reg_write.value = 0
+    dut.mem_reg_write.value = 0
     
     await Timer(1, units="ns")
     assert dut.flush_if.value == 1, "IF stage should be flushed on jump"
@@ -88,11 +111,15 @@ async def test_multiple_hazards(dut):
     
     # Set up both load-use and branch hazards
     dut.id_rs1_addr.value = 6
+    dut.id_rs2_addr.value = 0
     dut.ex_rd_addr.value = 6
-    dut.ex_mem_read.value = 1
-    dut.ex_reg_write.value = 1
+    dut.mem_rd_addr.value = 0
     dut.id_branch.value = 1
+    dut.id_jump.value = 0
+    dut.ex_mem_read.value = 1
     dut.ex_branch_taken.value = 1
+    dut.ex_reg_write.value = 1
+    dut.mem_reg_write.value = 0
     
     await Timer(1, units="ns")
     assert dut.stall_if.value == 1, "Load-use hazard should take precedence"
@@ -107,8 +134,13 @@ async def test_x0_hazards(dut):
     dut.id_rs1_addr.value = 0
     dut.id_rs2_addr.value = 0
     dut.ex_rd_addr.value = 0
+    dut.mem_rd_addr.value = 0
+    dut.id_branch.value = 0
+    dut.id_jump.value = 0
     dut.ex_mem_read.value = 1
+    dut.ex_branch_taken.value = 0
     dut.ex_reg_write.value = 1
+    dut.mem_reg_write.value = 0
     
     await Timer(1, units="ns")
     assert dut.stall_if.value == 0, "No hazard should be detected for x0"

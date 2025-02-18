@@ -1,9 +1,12 @@
 <testsuites name="results">
   <testsuite name="all" package="all">
-    <property name="random_seed" value="1739391394" />
-    <testcase name="test_if_id_reg" classname="test_pipeline_registers" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_pipeline_registers.py" lineno="6" time="7.200241088867188e-05" sim_time_ns="0.0" ratio_time="0.0" />
-    <testcase name="test_id_ex_reg" classname="test_pipeline_registers" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_pipeline_registers.py" lineno="62" time="0.00011706352233886719" sim_time_ns="0.001" ratio_time="8.54237067209776" />
-    <testcase name="test_ex_mem_reg" classname="test_pipeline_registers" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_pipeline_registers.py" lineno="123" time="4.315376281738281e-05" sim_time_ns="0.001" ratio_time="23.172950276243096" />
-    <testcase name="test_mem_wb_reg" classname="test_pipeline_registers" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_pipeline_registers.py" lineno="169" time="0.0005779266357421875" sim_time_ns="31.001" ratio_time="53641.75672607261" />
+    <property name="random_seed" value="1739898679" />
+    <testcase name="test_reset" classname="test_program_counter" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_program_counter.py" lineno="119" time="0.0010881423950195312" sim_time_ns="40.0" ratio_time="36759.894829097284" />
+    <testcase name="test_sequential_increment" classname="test_program_counter" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_program_counter.py" lineno="152" time="0.0004909038543701172" sim_time_ns="90.001" ratio_time="183337.3260339971" />
+    <testcase name="test_stall" classname="test_program_counter" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_program_counter.py" lineno="169" time="0.0006339550018310547" sim_time_ns="91.001" ratio_time="143544.88841820235" />
+    <testcase name="test_branch" classname="test_program_counter" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_program_counter.py" lineno="211" time="0.0003609657287597656" sim_time_ns="60.000999999999976" ratio_time="166223.5365284015" />
+    <testcase name="test_branch_edge_cases" classname="test_program_counter" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_program_counter.py" lineno="239" time="0.0007402896881103516" sim_time_ns="90.00100000000003" ratio_time="121575.37980805157" />
+    <testcase name="test_multiple_branches" classname="test_program_counter" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_program_counter.py" lineno="277" time="0.0007560253143310547" sim_time_ns="150.00099999999998" ratio_time="198407.37757931248" />
+    <testcase name="test_multiple_stalls" classname="test_program_counter" file="/Users/ethan/Documents/workspace/repos/tru-r32i/tb/test_program_counter.py" lineno="308" time="0.0010476112365722656" sim_time_ns="230.00099999999998" ratio_time="219548.04604096492" />
   </testsuite>
 </testsuites>
